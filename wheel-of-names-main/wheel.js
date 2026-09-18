@@ -22,7 +22,6 @@ var spinAudioTimer = null;
 
 // Hidden pity-system state. It is deliberately kept out of the UI.
 var consecutiveNaturalLWins = 0;
-var pityWUsed = false;
 var pityWPending = false;
 
 var settings = {
@@ -310,9 +309,10 @@ function spin() {
   var rotations = Math.floor(Math.random() * 3) + 3;
   pityWPending = false;
 
-  // After three consecutive L results, force W exactly once when W is present.
+  // Every time a player gets three consecutive natural L results, force one W
+  // immediately when W is present in the list.
   var wIndex = names.findIndex(function(name) { return name.toLowerCase() === 'w'; });
-  if (!pityWUsed && consecutiveNaturalLWins >= 3 && wIndex !== -1) {
+  if (consecutiveNaturalLWins >= 3 && wIndex !== -1) {
     var pityTargetAngle = -((wIndex + 0.5) * arc);
     var pityAngleDifference = (pityTargetAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
     totalRotation = rotations * 2 * Math.PI + pityAngleDifference;
@@ -364,7 +364,6 @@ function stopRotateWheel() {
   if (text.toLowerCase() === 'l' && !pityWPending) {
     consecutiveNaturalLWins++;
   } else if (text.toLowerCase() === 'w') {
-    if (pityWPending) pityWUsed = true;
     consecutiveNaturalLWins = 0;
   } else {
     consecutiveNaturalLWins = 0;
