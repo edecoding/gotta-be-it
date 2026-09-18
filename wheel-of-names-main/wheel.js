@@ -93,6 +93,22 @@ document.querySelectorAll('[data-customize-tab]').forEach(function(tab) {
 
 document.addEventListener('keydown', function(event) {
   if (document.activeElement.tagName.toLowerCase() === 'textarea' || document.activeElement.tagName.toLowerCase() === 'input') return;
+
+  // Keyboard shortcuts: R selects L and T selects W, but only when that
+  // exact choice is present in the wheel. The spin starts immediately.
+  if (!isRigging && (event.key.toLowerCase() === 'r' || event.key.toLowerCase() === 't')) {
+    var shortcutChoice = event.key.toLowerCase() === 'r' ? 'l' : 'w';
+    var shortcutWinner = names.find(function(name) {
+      return name.toLowerCase() === shortcutChoice;
+    });
+    if (shortcutWinner !== undefined && !document.getElementById('spinBtn').disabled) {
+      event.preventDefault();
+      riggedWinner = shortcutWinner;
+      spin();
+    }
+    return;
+  }
+
   if (event.code === 'Space') {
     event.preventDefault();
     if (!isRigging) {
