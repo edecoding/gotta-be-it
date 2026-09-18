@@ -1,22 +1,15 @@
 ﻿// wheel.js
 
-// Get canvas element and context
 var canvas = document.getElementById('wheelCanvas');
 var ctx = canvas.getContext('2d');
-
-// Variables for the wheel
 var names = [];
 var startAngle = 0;
 var arc = 0;
 var spinTimeout = null;
 var spinTime = 0;
 var spinTimeTotal = 0;
-
-// Variables for spinning animation
 var totalRotation = 0;
 var initialStartAngle = 0;
-
-// Rigged winner variables
 var isRigging = false;
 var riggedWinner = '';
 var riggedInput = '';
@@ -26,6 +19,12 @@ var results = [];
 var autoRemoveTimer = null;
 var audioContext = null;
 var spinAudioTimer = null;
+
+// Hidden pity-system state. It is deliberately kept out of the UI.
+var consecutiveNaturalLWins = 0;
+var pityWUsed = false;
+var pityWPending = false;
+
 var settings = {
   displayDuplicates: true,
   spinSlowly: false,
@@ -63,9 +62,7 @@ document.getElementById('closeWinnerBtn').addEventListener('click', closeWinnerD
 document.getElementById('removeWinnerBtn').addEventListener('click', removeWinner);
 document.getElementById('winnerOverlay').addEventListener('click', closeWinnerDialog);
 document.addEventListener('click', function() {
-  if (document.getElementById('winnerOverlay').classList.contains('visible')) {
-    closeWinnerDialog();
-  }
+  if (document.getElementById('winnerOverlay').classList.contains('visible')) closeWinnerDialog();
 });
 document.getElementById('entriesTab').addEventListener('click', function() { switchPanel('entries'); });
 document.getElementById('resultsTab').addEventListener('click', function() { switchPanel('results'); });
@@ -91,66 +88,40 @@ document.querySelectorAll('[data-customize-tab]').forEach(function(tab) {
   });
 });
 
-// Event listener for detecting spacebar and capturing rigged winner name
 document.addEventListener('keydown', function(event) {
-  // If focus is on an input field, ignore
-  if (document.activeElement.tagName.toLowerCase() === 'textarea' || document.activeElement.tagName.toLowerCase() === 'input') {
-    return;
-  }
-
+  if (document.activeElement.tagName.toLowerCase() === 'textarea' || document.activeElement.tagName.toLowerCase() === 'input') return;
   if (event.code === 'Space') {
-    event.preventDefault(); // Prevent default spacebar scrolling
+    event.preventDefault();
     if (!isRigging) {
-      // Start rigging mode
       isRigging = true;
       riggedInput = '';
       console.log('Enter the rigged winner\'s name and press space to confirm.');
     } else {
-      // Confirm rigged winner
       isRigging = false;
       riggedWinner = riggedInput.trim();
-      if (riggedWinner !== '') {
-        console.log('Rigged winner set to: ' + riggedWinner);
-      } else {
-        console.log('Rigged winner cleared.');
-      }
+      console.log(riggedWinner !== '' ? 'Rigged winner set to: ' + riggedWinner : 'Rigged winner cleared.');
     }
   } else if (isRigging) {
-    // Capture input for rigged winner name
     riggedInput += event.key;
   }
 });
 
-// Set canvas dimensions based on viewport
 function setCanvasSize() {
   var containerWidth = canvas.parentElement.clientWidth;
   var containerHeight = window.innerHeight;
-
-  var size = Math.min(containerWidth * 0.9, containerHeight * 0.5); // Adjusted size
-
+  var size = Math.min(containerWidth * 0.9, containerHeight * 0.5);
   canvas.width = size;
   canvas.height = size;
 }
 
-// Function to update the wheel with names
 function updateWheel() {
   var input = document.getElementById('namesInput').value;
-  names = input.split(/[\n,]/).map(function(name) {
-    return name.trim();
-  }).filter(function(name) {
-    return name !== '';
-  });
-  if (!settings.displayDuplicates) {
-    names = names.filter(function(name, index) {
-      return names.indexOf(name) === index;
-    });
-  }
-  startAngle = 0; // Reset the start angle
-  setCanvasSize(); // Update canvas size
+  names = input.split(/[\n,]/).map(function(name) { return name.trim(); }).filter(function(name) { return name !== ''; });
+  if (!settings.displayDuplicates) names = names.filter(function(name, index) { return names.indexOf(name) === index; });
+  startAngle = 0;
+  setCanvasSize();
   drawWheel();
   updateEntryCount();
-
-  // Save names to localStorage
   localStorage.setItem('wheelNames', JSON.stringify(names));
 }
 
@@ -186,12 +157,10 @@ function openCustomize() {
   document.getElementById('customizeOverlay').classList.add('visible');
   document.getElementById('customizeOverlay').setAttribute('aria-hidden', 'false');
 }
-
 function closeCustomize() {
   document.getElementById('customizeOverlay').classList.remove('visible');
   document.getElementById('customizeOverlay').setAttribute('aria-hidden', 'true');
 }
-
 function saveCustomize() {
   settings.displayDuplicates = document.getElementById('displayDuplicates').checked;
   settings.spinSlowly = document.getElementById('spinSlowly').checked;
@@ -214,13 +183,11 @@ function saveCustomize() {
   applySettings();
   closeCustomize();
 }
-
 function applySettings() {
   document.body.classList.toggle('no-page-gradient', !settings.pageGradient);
   document.body.classList.toggle('no-wheel-shadow', !settings.wheelShadow);
   updatePointerColor();
 }
-
 function switchPanel(panelName) {
   var showingResults = panelName === 'results';
   document.getElementById('entriesTab').classList.toggle('active', !showingResults);
@@ -228,22 +195,12 @@ function switchPanel(panelName) {
   document.getElementById('entriesView').hidden = showingResults;
   document.getElementById('resultsView').hidden = !showingResults;
 }
-
-function saveResults() {
-  localStorage.setItem('wheelResults', JSON.stringify(results));
-}
-
+function saveResults() { localStorage.setItem('wheelResults', JSON.stringify(results)); }
 function renderResults() {
   document.getElementById('resultCount').textContent = results.length;
   document.getElementById('resultsInput').value = results.join('\n');
 }
-
-function recordResult(winner) {
-  results.push(winner);
-  saveResults();
-  renderResults();
-}
-
+function recordResult(winner) { results.push(winner); saveResults(); renderResults(); }
 function exportResults() {
   if (results.length === 0) return;
   var blob = new Blob([results.join('\n') + '\n'], { type: 'text/plain;charset=utf-8' });
@@ -254,56 +211,38 @@ function exportResults() {
   URL.revokeObjectURL(link.href);
 }
 
-// Function to draw the wheel
 function drawWheel() {
-  // Adjusted to use dynamic canvas size
   var outsideRadius = canvas.width / 2 - 20;
   var textRadius = outsideRadius * 0.70;
-  var insideRadius = 0;
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
   if (names.length === 0) {
-    // If no names are available, display a message
     ctx.font = 'bold 24px Arial';
     ctx.fillStyle = 'black';
     ctx.fillText('No names available!', canvas.width / 2 - ctx.measureText('No names available!').width / 2, canvas.height / 2);
     return;
   }
-
   var numSegments = names.length;
   arc = 2 * Math.PI / numSegments;
   updatePointerColor();
-
   for (var i = 0; i < numSegments; i++) {
     var angle = startAngle + i * arc;
     var color = getColor(i, numSegments);
     ctx.fillStyle = color;
-
     ctx.beginPath();
     ctx.moveTo(canvas.width / 2, canvas.height / 2);
     ctx.arc(canvas.width / 2, canvas.height / 2, outsideRadius, angle, angle + arc, false);
     ctx.lineTo(canvas.width / 2, canvas.height / 2);
     ctx.fill();
-
-    // Determine the text color based on the background color
-    var textColor = getContrastingTextColor(color);
-
     ctx.save();
-    ctx.fillStyle = textColor;
-    ctx.translate(
-        canvas.width / 2 + Math.cos(angle + arc / 2) * textRadius,
-        canvas.height / 2 + Math.sin(angle + arc / 2) * textRadius
-    );
+    ctx.fillStyle = getContrastingTextColor(color);
+    ctx.translate(canvas.width / 2 + Math.cos(angle + arc / 2) * textRadius, canvas.height / 2 + Math.sin(angle + arc / 2) * textRadius);
     ctx.rotate(angle + arc / 2 + Math.PI / 2);
     var text = names[i];
     ctx.font = Math.max(24, outsideRadius / 4.5) + 'px Roboto, Arial, sans-serif';
     ctx.fillText(text, -ctx.measureText(text).width / 2, 0);
     ctx.restore();
   }
-
 }
-
 function updatePointerColor() {
   if (names.length === 0 || !arc) return;
   if (!settings.pointerChangesColor) {
@@ -314,47 +253,22 @@ function updatePointerColor() {
   var pointerIndex = Math.floor(pointerAngle / arc) % names.length;
   document.querySelector('.pointer').style.setProperty('--pointer-color', getColor(pointerIndex, names.length));
 }
-
-// Function to generate colors for the wheel segments
 function getColor(item, maxitem) {
-  if (maxitem === 2) {
-    return item === 0 ? '#ed1b2f' : '#2864dc';
-  }
-  var hue = item * (360 / maxitem);
-  return 'hsl(' + hue + ', 100%, 50%)';
+  if (maxitem === 2) return item === 0 ? '#ed1b2f' : '#2864dc';
+  return 'hsl(' + item * (360 / maxitem) + ', 100%, 50%)';
 }
-
-// Function to determine the contrasting text color
 function getContrastingTextColor(backgroundColor) {
-  if (backgroundColor.charAt(0) === '#') {
-    return backgroundColor.toLowerCase() === '#2864dc' ? 'white' : 'white';
-  }
-  // Extract HSL values from the background color string
-  var hslRegex = /hsl\((\d+),\s*(\d+)%\,\s*(\d+)%\)/;
-  var result = hslRegex.exec(backgroundColor);
-
-  var h = parseInt(result[1]);
-  var s = parseInt(result[2]);
-  var l = parseInt(result[3]);
-
-  // Convert HSL to RGB
-  var rgb = hslToRgb(h / 360, s / 100, l / 100);
-
-  // Calculate luminance
-  var luminance = (0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b);
-
-  // Return black for light backgrounds and white for dark backgrounds
+  if (backgroundColor.charAt(0) === '#') return 'white';
+  var result = /hsl\((\d+),\s*(\d+)%\,\s*(\d+)%\)/.exec(backgroundColor);
+  var rgb = hslToRgb(parseInt(result[1]) / 360, parseInt(result[2]) / 100, parseInt(result[3]) / 100);
+  var luminance = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
   return luminance > 0.6 ? 'black' : 'white';
 }
-
-// Function to convert HSL to RGB
 function hslToRgb(h, s, l) {
   var r, g, b;
-
-  if (s === 0) {
-    r = g = b = l; // achromatic
-  } else {
-    var hue2rgb = function hue2rgb(p, q, t) {
+  if (s === 0) r = g = b = l;
+  else {
+    var hue2rgb = function(p, q, t) {
       if (t < 0) t += 1;
       if (t > 1) t -= 1;
       if (t < 1 / 6) return p + (q - p) * 6 * t;
@@ -362,43 +276,36 @@ function hslToRgb(h, s, l) {
       if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
       return p;
     };
-
     var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
     var p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
+    r = hue2rgb(p, q, h + 1 / 3); g = hue2rgb(p, q, h); b = hue2rgb(p, q, h - 1 / 3);
   }
-
-  return {
-    r: r,
-    g: g,
-    b: b
-  };
+  return { r: r, g: g, b: b };
 }
 
-// Function to start spinning the wheel
 function spin() {
-  if (names.length === 0) {
-    alert("No names available to spin!");
-    return;
-  }
-
+  if (names.length === 0) { alert('No names available to spin!'); return; }
   spinTime = 0;
   spinTimeTotal = settings.spinTime * 1000 * (settings.spinSlowly ? 2 : 1);
   initialStartAngle = startAngle;
+  var rotations = Math.floor(Math.random() * 3) + 3;
+  pityWPending = false;
 
-  var rotations = Math.floor(Math.random() * 3) + 3; // 3 to 5 rotations
-
-  if (riggedWinner) {
+  // After three consecutive L results, force W exactly once when W is present.
+  var wIndex = names.findIndex(function(name) { return name.toLowerCase() === 'w'; });
+  if (!pityWUsed && consecutiveNaturalLWins >= 3 && wIndex !== -1) {
+    var pityTargetAngle = -((wIndex + 0.5) * arc);
+    var pityAngleDifference = (pityTargetAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
+    totalRotation = rotations * 2 * Math.PI + pityAngleDifference;
+    pityWPending = true;
+  } else if (riggedWinner) {
     var winnerIndex = names.indexOf(riggedWinner);
     if (winnerIndex === -1) {
       alert('Rigged winner "' + riggedWinner + '" not found in the names list.');
-      riggedWinner = ''; // Clear the rigged winner
+      riggedWinner = '';
     } else {
       var desiredAngle = -((winnerIndex + 0.5) * arc);
       var angleDifference = (desiredAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
-
       totalRotation = rotations * 2 * Math.PI + angleDifference;
     }
   } else if (names.length === 2 && names.some(function(name) { return name.toLowerCase() === 'l'; })) {
@@ -411,56 +318,48 @@ function spin() {
   } else {
     totalRotation = rotations * 2 * Math.PI + Math.random() * 2 * Math.PI;
   }
-
-  // Disable spin button
   document.getElementById('spinBtn').disabled = true;
   document.getElementById('result').classList.remove('show');
   startSpinSound();
-
   rotateWheel();
 }
-
-// Function to rotate the wheel
 function rotateWheel() {
   spinTime += 30;
   if (spinTime >= spinTimeTotal) {
-    startAngle = initialStartAngle + totalRotation;
-    startAngle = startAngle % (2 * Math.PI); // Normalize the angle
+    startAngle = (initialStartAngle + totalRotation) % (2 * Math.PI);
     stopRotateWheel();
     return;
   }
-
-  var t = spinTime / spinTimeTotal;
-  var easedT = easeOut(t);
-
-  startAngle = initialStartAngle + easedT * totalRotation;
-
+  startAngle = initialStartAngle + easeOut(spinTime / spinTimeTotal) * totalRotation;
   drawWheel();
   spinTimeout = setTimeout(rotateWheel, 30);
 }
-
-// Function to stop the wheel and display the selected name
 function stopRotateWheel() {
   clearTimeout(spinTimeout);
   stopSpinSound();
-
   var pointerAngle = ((-startAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
   var index = Math.floor(pointerAngle / arc) % names.length;
-
   var text = names[index];
+
+  // Count consecutive L outcomes and consume the one-time pity result.
+  if (text.toLowerCase() === 'l' && !pityWPending) {
+    consecutiveNaturalLWins++;
+  } else if (text.toLowerCase() === 'w') {
+    if (pityWPending) pityWUsed = true;
+    consecutiveNaturalLWins = 0;
+  } else {
+    consecutiveNaturalLWins = 0;
+  }
+  pityWPending = false;
+
   recordResult(text);
-  document.getElementById('result').innerText = "Congratulations! The winner is " + text + "!";
+  document.getElementById('result').innerText = 'Congratulations! The winner is ' + text + '!';
   document.getElementById('result').classList.add('show');
   showWinnerDialog(text);
   playAfterSound();
-
-  // Clear the rigged winner after spinning
   riggedWinner = '';
-
-  // Enable spin button
   document.getElementById('spinBtn').disabled = false;
 }
-
 function showWinnerDialog(winner) {
   currentWinner = winner;
   if (!settings.displayPopup) {
@@ -475,14 +374,12 @@ function showWinnerDialog(winner) {
   if (settings.launchConfetti) startConfetti();
   if (settings.autoRemoveWinner) autoRemoveTimer = setTimeout(removeWinner, 5000);
 }
-
 function closeWinnerDialog() {
   clearTimeout(autoRemoveTimer);
   document.getElementById('winnerOverlay').classList.remove('visible');
   document.getElementById('winnerOverlay').setAttribute('aria-hidden', 'true');
   stopConfetti();
 }
-
 function removeWinner() {
   clearTimeout(autoRemoveTimer);
   if (settings.removeSound) playTone(180, 0.08, settings.afterVolume / 100);
@@ -496,7 +393,6 @@ function removeWinner() {
   closeWinnerDialog();
   document.getElementById('result').textContent = '';
 }
-
 function playTone(frequency, duration, volume) {
   if (!window.AudioContext && !window.webkitAudioContext) return;
   audioContext = audioContext || new (window.AudioContext || window.webkitAudioContext)();
@@ -505,12 +401,9 @@ function playTone(frequency, duration, volume) {
   oscillator.frequency.value = frequency;
   gain.gain.setValueAtTime(Math.max(0.001, volume * 0.08), audioContext.currentTime);
   gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-  oscillator.start();
-  oscillator.stop(audioContext.currentTime + duration);
+  oscillator.connect(gain); gain.connect(audioContext.destination);
+  oscillator.start(); oscillator.stop(audioContext.currentTime + duration);
 }
-
 function startSpinSound() {
   if (settings.duringSound === 'none') return;
   stopSpinSound();
@@ -518,81 +411,53 @@ function startSpinSound() {
   tick();
   spinAudioTimer = setInterval(tick, settings.spinSlowly ? 180 : 120);
 }
-
-function stopSpinSound() {
-  if (spinAudioTimer) clearInterval(spinAudioTimer);
-  spinAudioTimer = null;
-}
-
+function stopSpinSound() { if (spinAudioTimer) clearInterval(spinAudioTimer); spinAudioTimer = null; }
 function playAfterSound() {
   if (settings.afterSound === 'none') return;
   playTone(523, 0.12, settings.afterVolume / 100);
   setTimeout(function() { playTone(659, 0.16, settings.afterVolume / 100); }, 130);
 }
-
 function startConfetti() {
   var confettiCanvas = document.getElementById('confettiCanvas');
   var confettiContext = confettiCanvas.getContext('2d');
   var pieces = [];
   var colors = ['#ed1b2f', '#2864dc', '#f4c21d', '#0aa95c'];
-
   confettiCanvas.width = window.innerWidth;
   confettiCanvas.height = window.innerHeight;
-  for (var i = 0; i < 150; i++) {
-    pieces.push({
-      x: Math.random() * confettiCanvas.width,
-      y: -Math.random() * confettiCanvas.height * 0.4,
-      width: 4 + Math.random() * 5,
-      height: 8 + Math.random() * 8,
-      speed: 2 + Math.random() * 4,
-      drift: (Math.random() - 0.5) * 2,
-      angle: Math.random() * Math.PI,
-      spin: (Math.random() - 0.5) * 0.18,
-      color: colors[i % colors.length]
-    });
-  }
-
+  for (var i = 0; i < 150; i++) pieces.push({
+    x: Math.random() * confettiCanvas.width, y: -Math.random() * confettiCanvas.height * 0.4,
+    width: 4 + Math.random() * 5, height: 8 + Math.random() * 8,
+    speed: 2 + Math.random() * 4, drift: (Math.random() - 0.5) * 2,
+    angle: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 0.18, color: colors[i % colors.length]
+  });
   function renderConfetti() {
     confettiContext.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
     pieces.forEach(function(piece) {
-      piece.y += piece.speed;
-      piece.x += piece.drift;
-      piece.angle += piece.spin;
+      piece.y += piece.speed; piece.x += piece.drift; piece.angle += piece.spin;
       if (piece.y > confettiCanvas.height + 20) piece.y = -20;
-      confettiContext.save();
-      confettiContext.translate(piece.x, piece.y);
-      confettiContext.rotate(piece.angle);
+      confettiContext.save(); confettiContext.translate(piece.x, piece.y); confettiContext.rotate(piece.angle);
       confettiContext.fillStyle = piece.color;
       confettiContext.fillRect(-piece.width / 2, -piece.height / 2, piece.width, piece.height);
       confettiContext.restore();
     });
     confettiFrame = requestAnimationFrame(renderConfetti);
   }
-
   stopConfetti();
   renderConfetti();
 }
-
 function stopConfetti() {
   if (confettiFrame) cancelAnimationFrame(confettiFrame);
   confettiFrame = null;
   var confettiCanvas = document.getElementById('confettiCanvas');
   if (confettiCanvas) confettiCanvas.getContext('2d').clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
 }
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
-// Easing function for spin animation
-function easeOut(t) {
-  return 1 - Math.pow(1 - t, 3);
-}
-
-// Load names from localStorage on page load
 window.addEventListener('load', function() {
   applySettings();
   setCanvasSize();
   var storedResults = localStorage.getItem('wheelResults');
-  if (storedResults) {
-    results = JSON.parse(storedResults);
-  }
+  if (storedResults) results = JSON.parse(storedResults);
   renderResults();
   var storedNames = localStorage.getItem('wheelNames');
   if (storedNames) {
@@ -601,14 +466,6 @@ window.addEventListener('load', function() {
     updateEntryCount();
     startAngle = 0;
     drawWheel();
-  } else {
-    // Initial draw if no names are in localStorage
-    drawWheel();
-  }
+  } else drawWheel();
 });
-
-// Adjust canvas size on window resize
-window.addEventListener('resize', function() {
-  setCanvasSize();
-  drawWheel();
-});
+window.addEventListener('resize', function() { setCanvasSize(); drawWheel(); });
