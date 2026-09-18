@@ -301,6 +301,13 @@ function hslToRgb(h, s, l) {
   return { r: r, g: g, b: b };
 }
 
+// Pick a random point well inside a segment rather than its exact center.
+// This keeps shortcut and manually rigged spins visually natural while still
+// guaranteeing that the selected segment wins.
+function getRandomSegmentPosition() {
+  return 0.15 + Math.random() * 0.7;
+}
+
 function spin() {
   if (names.length === 0) { alert('No names available to spin!'); return; }
   spinTime = 0;
@@ -313,7 +320,7 @@ function spin() {
   // immediately when W is present in the list.
   var wIndex = names.findIndex(function(name) { return name.toLowerCase() === 'w'; });
   if (consecutiveNaturalLWins >= 3 && wIndex !== -1) {
-    var pityTargetAngle = -((wIndex + 0.5) * arc);
+    var pityTargetAngle = -((wIndex + getRandomSegmentPosition()) * arc);
     var pityAngleDifference = (pityTargetAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
     totalRotation = rotations * 2 * Math.PI + pityAngleDifference;
     pityWPending = true;
@@ -323,14 +330,16 @@ function spin() {
       alert('Rigged winner "' + riggedWinner + '" not found in the names list.');
       riggedWinner = '';
     } else {
-      var desiredAngle = -((winnerIndex + 0.5) * arc);
+      // Keep the selected winner, but land at a random position inside its
+      // segment so the pointer does not stop on the letter's exact center.
+      var desiredAngle = -((winnerIndex + getRandomSegmentPosition()) * arc);
       var angleDifference = (desiredAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
       totalRotation = rotations * 2 * Math.PI + angleDifference;
     }
   } else if (names.length === 2 && names.some(function(name) { return name.toLowerCase() === 'l'; })) {
     var lIndex = names.findIndex(function(name) { return name.toLowerCase() === 'l'; });
     var targetIndex = Math.random() < 0.68 ? lIndex : (lIndex === 0 ? 1 : 0);
-    var randomSegmentPosition = 0.15 + Math.random() * 0.7;
+    var randomSegmentPosition = getRandomSegmentPosition();
     var targetAngle = -((targetIndex + randomSegmentPosition) * arc);
     var targetDifference = (targetAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
     totalRotation = rotations * 2 * Math.PI + targetDifference;
