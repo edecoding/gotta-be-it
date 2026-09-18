@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>wheelofnames.com</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand"><span class="brand-wheel">◉</span><span>wheelofnames.com</span></div>
+    <nav class="top-actions" aria-label="Main navigation">
+      <button id="customizeBtn" type="button">♟ <span>Customize</span></button><button type="button">▮ <span>New</span></button>
+      <button type="button">▰ <span>Open</span></button><button type="button">▣ <span>Save</span></button>
+      <button type="button">‹ <span>Share</span></button><button type="button">⌕ <span>Gallery</span></button>
+      <button type="button">⛶</button><button type="button">More ▼</button><button type="button">◉ <span>English</span></button>
+    </nav>
+  </header>
+  <main class="workspace">
+    <section class="stage">
+      <div class="stage-tools"><button class="round-tool" type="button" aria-label="Edit wheel">✎</button></div>
+      <div class="wheel-wrap"><div class="pointer" aria-hidden="true"></div><canvas id="wheelCanvas" width="700" height="700"></canvas><button id="spinBtn" class="wheel-spin" type="button" aria-label="Spin the wheel"></button></div>
+      <div id="result" role="status" aria-live="polite"></div>
+    </section>
+    <aside class="panel">
+      <button class="collapse" type="button" aria-label="Collapse panel">›</button>
+      <div class="tabs"><button id="entriesTab" class="active" type="button">Entries <b id="entryCount">2</b></button><button id="resultsTab" type="button">Results <b id="resultCount">0</b></button></div>
+      <div class="panel-content">
+        <section id="entriesView"><div class="entry-tools"><button id="shuffleBtn" type="button">⤨ <span>Shuffle</span></button><button id="sortBtn" type="button">↕ <span>Sort</span></button><button type="button">▧ <span>Add image</span> ▼</button><label class="advanced"><input type="checkbox"> Advanced</label></div><textarea id="namesInput" aria-label="Entries">W
+
+L</textarea></section>
+        <section id="resultsView" hidden><div class="results-tools"><button id="resultsSortBtn" type="button">↕ <span>Sort</span></button><button id="clearResultsBtn" type="button">× <span>Clear the list</span></button><button id="exportResultsBtn" type="button">⇩ <span>Export results</span></button></div><textarea id="resultsInput" aria-label="Past results" readonly></textarea></section>
+      </div>
+      <footer class="panel-footer"><span>Version 429 <strong>New!</strong></span><a href="#">Changelog</a></footer>
+    </aside>
+  </main>
+  <div class="ad-strip"></div>
+  <div id="customizeOverlay" class="customize-overlay" aria-hidden="true">
+    <section class="customize-dialog" role="dialog" aria-modal="true" aria-labelledby="customizeTitle">
+      <h2 id="customizeTitle" class="visually-hidden">Customize wheel</h2>
+      <div class="customize-tabs"><button class="active" data-customize-tab="during" type="button">During spin</button><button data-customize-tab="after" type="button">After spin</button><button data-customize-tab="appearance" type="button">Appearance</button></div>
+      <div class="customize-content">
+        <section class="customize-page active" data-customize-page="during">
+          <div class="setting-row sound-row"><label>Sound</label><select id="duringSound"><option value="tick">Ticking sound</option><option value="none">No sound</option></select><button id="previewDuringSound" class="icon-setting" type="button">▶</button><button id="stopDuringSound" class="icon-setting" type="button">■</button></div>
+          <div class="setting-block"><label for="duringVolume">Volume</label><input id="duringVolume" type="range" min="0" max="100" value="50"><div class="range-labels"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>
+          <hr><div class="check-row"><label><input id="displayDuplicates" type="checkbox" checked> Display duplicates <b>?</b></label><label><input id="spinSlowly" type="checkbox"> Spin slowly</label><label><input id="showTitle" type="checkbox" checked> Show title</label></div>
+          <hr><div class="setting-block"><label for="spinTime">Spin time (seconds)</label><input id="spinTime" type="range" min="1" max="60" value="5"><div class="range-labels"><span>1</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span></div></div>
+          <hr><div class="setting-block"><strong>Max number of names visible on the wheel</strong><small>All names in the text-box have the same chance of winning, regardless of this value.</small><input id="maxVisibleNames" type="range" min="4" max="1000" value="1000"><div class="range-labels"><span>4</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span><span>600</span><span>700</span><span>800</span><span>900</span><span>1000</span></div></div>
+        </section>
+        <section class="customize-page" data-customize-page="after">
+          <div class="setting-row sound-row"><label>Sound</label><select id="afterSound"><option value="applause">Subdued applause</option><option value="none">No sound</option></select><button id="previewAfterSound" class="icon-setting" type="button">▶</button><button id="stopAfterSound" class="icon-setting" type="button">■</button></div>
+          <div class="setting-block"><label for="afterVolume">Volume</label><input id="afterVolume" type="range" min="0" max="100" value="50"><div class="range-labels"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>
+          <hr><div class="check-row"><label><input id="animateWinner" type="checkbox"> Animate winning entry</label><label><input id="launchConfetti" type="checkbox" checked> Launch confetti</label><label><input id="autoRemoveWinner" type="checkbox"> Auto-remove winner after 5 seconds</label></div>
+          <hr><div class="check-row single"><label><input id="displayPopup" type="checkbox" checked> Display popup with message:</label><input id="popupMessage" class="setting-input" value="We have a winner!"><label><input id="displayRemoveButton" type="checkbox" checked> Display the “Remove” button</label></div>
+          <div class="check-row single"><label><input id="removeSound" type="checkbox"> Play a click sound when the winner is removed</label></div>
+        </section>
+        <section class="customize-page" data-customize-page="appearance">
+          <div class="appearance-options"><label><input id="oneColorPerSection" type="radio" name="colorMode" checked><span class="wheel-preview one-color"></span>One color per section</label><label><input id="wheelBackgroundImage" type="radio" name="colorMode"><span class="cookie-preview"></span>Wheel background image</label></div>
+          <hr><button id="themeBtn" class="theme-button" type="button">Apply a theme　▼</button><p class="setting-heading">Customize colors　<b>?</b></p><div class="color-options"><label><input type="checkbox" checked><span class="color-swatch" style="--swatch:#2870e8"></span></label><label><input type="checkbox" checked><span class="color-swatch" style="--swatch:#ed1b2f"></span></label><label><input type="checkbox" checked><span class="color-swatch" style="--swatch:#f2b900"></span></label><label><input type="checkbox" checked><span class="color-swatch" style="--swatch:#00a63c"></span></label><label><input type="checkbox"><span class="color-swatch" style="--swatch:#111"></span></label><label><input type="checkbox"><span class="color-swatch" style="--swatch:#777"></span></label></div>
+          <hr><div class="appearance-grid"><label>Image at the center of the wheel <button type="button" class="image-button">▧　▼</button></label><label>Image size <select><option>S</option><option>M</option><option>L</option></select></label></div>
+          <hr><div class="appearance-grid"><label><button type="button" class="page-color">◉</button> Page background color</label><label><input id="wheelContours" type="checkbox"> Contours</label><label><input id="pageGradient" type="checkbox" checked> Display a color gradient on the page</label><label><input id="wheelShadow" type="checkbox" checked> Wheel shadow</label><label><select><option>Always show text on the wheel</option></select></label><label><input id="pointerChangesColor" type="checkbox" checked> Pointer changes color</label></div>
+        </section>
+      </div>
+      <div class="customize-actions"><button id="cancelCustomize" type="button">Cancel</button><button id="saveCustomize" type="button">OK</button></div>
+    </section>
+  </div>
+  <div id="winnerOverlay" class="winner-overlay" aria-hidden="true">
+    <canvas id="confettiCanvas" aria-hidden="true"></canvas>
+    <section class="winner-dialog" role="dialog" aria-modal="true" aria-labelledby="winnerTitle">
+      <h2 id="winnerTitle">We have a winner!</h2>
+      <div class="winner-body"><div id="winnerName"></div><div class="winner-actions"><button id="closeWinnerBtn" type="button">Close</button><button id="removeWinnerBtn" class="remove-winner" type="button">Remove</button></div></div>
+    </section>
+  </div>
+  <script src="wheel.js"></script>
+</body>
+</html>

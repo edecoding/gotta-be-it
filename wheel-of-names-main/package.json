@@ -1,0 +1,12 @@
+{
+  "name": "wheel-of-names",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Railway-ready interactive wheel of names website.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
