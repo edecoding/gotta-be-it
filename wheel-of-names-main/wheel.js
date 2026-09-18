@@ -403,7 +403,7 @@ function spin() {
     }
   } else if (names.length === 2 && names.some(function(name) { return name.toLowerCase() === 'l'; })) {
     var lIndex = names.findIndex(function(name) { return name.toLowerCase() === 'l'; });
-    var targetIndex = Math.random() < 0.8 ? lIndex : (lIndex === 0 ? 1 : 0);
+    var targetIndex = Math.random() < 0.68 ? lIndex : (lIndex === 0 ? 1 : 0);
     var randomSegmentPosition = 0.15 + Math.random() * 0.7;
     var targetAngle = -((targetIndex + randomSegmentPosition) * arc);
     var targetDifference = (targetAngle - startAngle + 2 * Math.PI) % (2 * Math.PI);
