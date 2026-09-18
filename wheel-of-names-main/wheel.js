@@ -47,6 +47,9 @@ var settings = {
 loadSettings();
 
 document.getElementById('spinBtn').addEventListener('click', spin);
+canvas.addEventListener('click', function() {
+  if (!document.getElementById('spinBtn').disabled) spin();
+});
 document.getElementById('shuffleBtn').addEventListener('click', function() {
   names.sort(function() { return Math.random() - 0.5; });
   document.getElementById('namesInput').value = names.join('\n');
